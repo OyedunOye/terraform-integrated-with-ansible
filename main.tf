@@ -8,6 +8,8 @@ variable "env_prefix" {}
 variable "my_ip_range" {}
 variable "instance_type" {}
 variable "public_ssh_key_location" {}
+variable "ssh_key_private" {}
+
 
 resource "aws_vpc" "my-app-vpc" {
   cidr_block = var.vpc_cidr_block
@@ -114,11 +116,13 @@ resource "aws_instance" "my-app-server" {
     associate_public_ip_address = true
     key_name = aws_key_pair.ssh-key.key_name
 
-    user_data = file("entry-script.sh")
-
-    user_data_replace_on_change = true
     tags = {
         Name: "${var.env_prefix}-server"
+    }
+
+    provisioner "local-exec" {
+        working_dir = "/home/oluwasade/ansible-project"
+        command = "ansible-playbook --inventory ${self.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
     }
 }
 
