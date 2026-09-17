@@ -1,6 +1,6 @@
-# Terraform AWS EC2 Deployment
+# Terraform AWS EC2 Deployment Integrated with Ansible Playbook for Server Configuration
 
-Terraform configuration that provisions a VPC and a single EC2 instance on AWS, bootstrapped via `user_data` to run Docker and serve an nginx container.
+Terraform configuration that provisions a VPC and a single EC2 instance on AWS, and integrates automatic server configuration by ansible playbook run by local-exec provisioner in a null_resource block.
 
 ## Architecture
 
@@ -19,14 +19,11 @@ Defined in `main.tf`:
 - **Compute**
   - `data.aws_ami.latest-amazon-linux-image` - looks up the latest Amazon Linux 2023 (x86_64, HVM) AMI
   - `aws_key_pair.ssh-key` - registers an existing local SSH public key for instance access
-  - `aws_instance.my-app-server` - the EC2 instance, launched with a public IP, the looked-up AMI, and bootstrapped via `entry-script.sh`
-
-- **Bootstrap script** (`entry-script.sh`) - runs on instance launch (and re-runs if the script changes, via `user_data_replace_on_change`):
-  - Installs and starts Docker
-  - Adds `ec2-user` to the `docker` group
-  - Runs an `nginx` container, mapping host port `8080` to container port `80`
+  - `aws_instance.my-app-server` - the EC2 instance, launched with a public IP address
 
 - **Provider** (`providers.tf`) - pins the AWS provider to `~> 6.0`. AWS credentials/region are read from `~/.aws/credentials` (not configured in code).
+
+- **Server Configuration by Ansible Playbook** - Uses local-exec provisioner to run an ansible playbook on the local machine to configure the terraform provisioned server.
 
 ## Outputs
 
@@ -47,7 +44,6 @@ Defined in `main.tf`:
 |---|---|
 | `main.tf` | VPC, networking, security group, AMI lookup, key pair, and EC2 instance resources |
 | `providers.tf` | Terraform and AWS provider version requirements |
-| `entry-script.sh` | Instance bootstrap script (installs Docker, runs nginx) |
 | `terraform.tfvars` | Variable values (gitignored - not committed, contains environment-specific config) |
 
 ## Variables
@@ -62,6 +58,7 @@ Declared in `main.tf` and supplied via `terraform.tfvars`:
 | `env_prefix` | Prefix used to name/tag resources (e.g. `dev`) |
 | `my_ip_range` | CIDR range allowed to SSH into the instance (your IP) |
 | `instance_type` | EC2 instance type |
+| `current_playbook` | Name of ansible playbook |
 | `public_ssh_key_location` | Path to your local SSH public key file |
 
 `terraform.tfvars` and `*.tfstate*` files are excluded from version control (see `.gitignore`) since they may contain sensitive or environment-specific data. Create your own `terraform.tfvars` before running Terraform, e.g.:
@@ -88,12 +85,11 @@ terraform plan
 # Apply the configuration
 terraform apply
 
-# Tear down the infrastructure when done
+# Tear down the infrastructure when 
+
 terraform destroy
-```
 
-Once applied, the nginx container is reachable at `http://<ec2-public_ip>:8080`, and the instance can be accessed via:
+# ssh into the new ec2 instance
 
-```bash
 ssh ec2-user@<ec2-public_ip>
 ```

@@ -9,6 +9,7 @@ variable "my_ip_range" {}
 variable "instance_type" {}
 variable "public_ssh_key_location" {}
 variable "ssh_key_private" {}
+variable "current_playbook" {}
 
 
 resource "aws_vpc" "my-app-vpc" {
@@ -129,7 +130,7 @@ resource "null_resource" "configure_server" {
 
     provisioner "local-exec" {
         working_dir = "/home/oluwasade/ansible-project"
-        command = "ansible-playbook --inventory ${aws_instance.my-app-server.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user deploy-docker-new-user.yaml"
+        command = "ansible-playbook --inventory ${aws_instance.my-app-server.public_ip}, --private-key ${var.ssh_key_private} --user ec2-user ${var.current_playbook}"
     }
 }
 
